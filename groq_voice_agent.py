@@ -6,13 +6,12 @@ from typing import Dict, Any, Optional
 from dotenv import load_dotenv
 
 from livekit import agents
-from livekit.agents import Agent, AgentSession, JobContext, WorkerOptions, RoomOutputOptions
+from livekit.agents import Agent, AgentSession, JobContext, WorkerOptions, RoomOutputOptions, AutoSubscribe
 from livekit.agents.llm import (
     llm,
     ChatContext,
     ChatMessage,
     StopResponse,
-    AutoSubscribe,
 )
 import assemblyai
 import groq
