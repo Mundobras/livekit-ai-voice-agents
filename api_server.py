@@ -141,10 +141,10 @@ async def start_agent_process(agent_id: str, agent_config: AgentConfig):
 
         command = [
             sys.executable,  # Garante que estamos usando o python correto do ambiente
-            "-m",
-            "livekit.agents",
-            "run",
+            # O comando correto, conforme a documentação do LiveKit, é executar o script diretamente
+            # com o argumento 'start'. Não usamos '-m' aqui.
             script_to_run,
+            "start",
             "--room",
             agent_config.room_name,
         ]
