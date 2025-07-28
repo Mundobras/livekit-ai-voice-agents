@@ -89,12 +89,25 @@ async def health_check():
 async def start_agent(agent_config: AgentConfig, background_tasks: BackgroundTasks):
     """Inicia um novo agente, criando a sala se não existir."""
     try:
-        # Inicializa a API do LiveKit (usará variáveis de ambiente)
-        lk_api = api.LiveKitAPI(
-            url=os.getenv("LIVEKIT_URL"),
-            api_key=os.getenv("LIVEKIT_API_KEY"),
-            api_secret=os.getenv("LIVEKIT_API_SECRET"),
-        )
+        # Diagnóstico: Verificar se as variáveis de ambiente do LiveKit estão presentes
+        livekit_url = os.getenv("LIVEKIT_URL")
+        api_key = os.getenv("LIVEKIT_API_KEY")
+        api_secret = os.getenv("LIVEKIT_API_SECRET")
+
+        logger.info(f"Verificando credenciais do LiveKit...")
+        logger.info(f"URL do LiveKit: {livekit_url}")
+        logger.info(f"Chave API do LiveKit presente: {'Sim' if api_key else 'Não'}")
+        logger.info(f"Segredo API do LiveKit presente: {'Sim' if api_secret else 'Não'}")
+
+        if not all([livekit_url, api_key, api_secret]):
+            logger.error("Uma ou mais variáveis de ambiente do LiveKit não foram encontradas.")
+            raise HTTPException(
+                status_code=500,
+                detail="Erro de configuração do servidor: As variáveis de ambiente LIVEKIT_URL, LIVEKIT_API_KEY ou LIVEKIT_API_SECRET não estão definidas no ambiente de deploy."
+            )
+
+        # Inicializa a API do LiveKit com as credenciais verificadas
+        lk_api = api.LiveKitAPI(url=livekit_url, api_key=api_key, api_secret=api_secret)
 
         # 1. Verifica se a sala já existe, usando o objeto de requisição correto
         list_request = api.ListRoomsRequest(names=[agent_config.room_name])
