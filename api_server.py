@@ -1,6 +1,5 @@
 import os
 import json
-print("API Server Script: STARTING EXECUTION")
 import logging
 import subprocess
 import sys
@@ -301,10 +300,8 @@ async def get_config():
     }
 
 if __name__ == "__main__":
-    print("API Server Script: ENTERING MAIN BLOCK")
     port = int(os.getenv("PORT", 8000))
     host = os.getenv("HOST", "0.0.0.0")
     
     logger.info(f"Iniciando servidor API na porta {port}")
-    print(f"API Server Script: ATTEMPTING TO START UVICORN ON PORT {port}")
     uvicorn.run(app, host="0.0.0.0", port=port)
