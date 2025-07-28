@@ -32,6 +32,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/", status_code=200)
+async def health_check():
+    """
+    Health check endpoint for Railway.
+    """
+    return {"status": "ok", "message": "API is healthy"}
+
 # Modelos Pydantic
 class AgentConfig(BaseModel):
     agent_type: str  # "basic", "advanced", "groq", "advanced_groq"
