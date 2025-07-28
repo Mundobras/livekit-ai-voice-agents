@@ -127,9 +127,55 @@ async def start_agent(agent_config: AgentConfig, background_tasks: BackgroundTas
             "status": "starting"
         }
         
+        except HTTPException:
+        raise  # Re-lança a exceção HTTP para que o FastAPI a manipule corretamente
     except Exception as e:
-        logger.error(f"Erro ao iniciar agente: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Erro inesperado ao iniciar agente: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro interno do servidor: {e}")
+
+class StopAgentRequest(BaseModel):
+    agent_id: Optional[str] = None
+    room_name: Optional[str] = None
+
+@app.post("/agents/stop", status_code=200)
+async def stop_agent(request: StopAgentRequest):
+    """Para um agente ativo pelo seu ID ou pelo nome da sala."""
+    if not request.agent_id and not request.room_name:
+        raise HTTPException(status_code=400, detail="É necessário fornecer agent_id ou room_name")
+
+    agent_to_stop_id = None
+    if request.room_name:
+        for agent_id, agent_info in active_agents.items():
+            if agent_info.get("room_name") == request.room_name:
+                agent_to_stop_id = agent_id
+                break
+        if not agent_to_stop_id:
+            raise HTTPException(status_code=404, detail=f"Nenhum agente ativo encontrado para a sala {request.room_name}")
+    elif request.agent_id:
+        if request.agent_id not in active_agents:
+            raise HTTPException(status_code=404, detail=f"Agente com ID {request.agent_id} não encontrado.")
+        agent_to_stop_id = request.agent_id
+
+    agent_info = active_agents.get(agent_to_stop_id, {})
+    process = agent_info.get("process")
+    
+    if process and process.poll() is None:  # Verifica se o processo está rodando
+        logger.info(f"Tentando parar o processo do agente {agent_to_stop_id} (PID: {process.pid})")
+        process.terminate()
+        try:
+            process.wait(timeout=5)
+            logger.info(f"Processo do agente {agent_to_stop_id} parado com sucesso.")
+        except subprocess.TimeoutExpired:
+            logger.warning(f"Processo do agente {agent_to_stop_id} não parou a tempo, forçando a finalização.")
+            process.kill()
+
+    if agent_to_stop_id in active_agents:
+        del active_agents[agent_to_stop_id]
+        logger.info(f"Agente {agent_to_stop_id} removido da lista de agentes ativos.")
+        return {"message": f"Agente {agent_to_stop_id} parado e removido com sucesso."}
+    
+    # Este caso não deve ser alcançado devido às verificações anteriores, mas é uma salvaguarda.
+    raise HTTPException(status_code=404, detail="Agente não encontrado para remoção.")
 
 async def start_agent_process(agent_id: str, agent_config: AgentConfig):
     """Inicia o processo do agente em segundo plano"""
