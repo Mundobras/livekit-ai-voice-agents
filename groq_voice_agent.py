@@ -140,7 +140,7 @@ class GroqVoiceAgent(Agent):
             "keywords": [word for word in text_lower.split() if len(word) > 3]
         }
 
-        async def on_user_turn_completed(self, chat_ctx: ChatContext, new_message: ChatMessage):
+    async def on_user_turn_completed(self, chat_ctx: ChatContext, new_message: ChatMessage):
         """Processa quando o usuário termina de falar"""
         user_transcript = new_message.text_content
         participant_id = chat_ctx.participant.identity if chat_ctx.participant else "unknown"

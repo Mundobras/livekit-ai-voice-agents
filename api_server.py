@@ -12,8 +12,8 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
-from livekit import api
-from livekit.api import room
+from livekit.api import LiveKitAPI, RoomServiceClient
+from livekit.protocol import room as room_proto
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
@@ -91,7 +91,7 @@ async def start_agent(agent_config: AgentConfig, background_tasks: BackgroundTas
     """Inicia um novo agente, criando a sala se não existir."""
     try:
         # Inicializa a API do LiveKit seguindo a documentação oficial
-        lk_api = api.LiveKitAPI(
+        lk_api = LiveKitAPI(
             url=os.getenv("LIVEKIT_URL"),
             api_key=os.getenv("LIVEKIT_API_KEY"),
             api_secret=os.getenv("LIVEKIT_API_SECRET"),
@@ -99,13 +99,13 @@ async def start_agent(agent_config: AgentConfig, background_tasks: BackgroundTas
         room_service = lk_api.room
 
         # 1. Verifica se a sala já existe, usando o objeto de requisição correto
-        list_request = room.ListRoomsRequest(names=[agent_config.room_name])
+        list_request = room_proto.ListRoomsRequest(names=[agent_config.room_name])
         room_list = await room_service.list_rooms(list_request)
 
         if not room_list.rooms:
             # 2. Se não existir, cria a sala
             logger.info(f"Sala '{agent_config.room_name}' não encontrada. Criando...")
-            create_request = room.CreateRoomRequest(name=agent_config.room_name)
+            create_request = room_proto.CreateRoomRequest(name=agent_config.room_name)
             await room_service.create_room(create_request)
             logger.info(f"Sala '{agent_config.room_name}' criada com sucesso.")
 
