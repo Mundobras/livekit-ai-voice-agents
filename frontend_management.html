@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LiveKit AI Voice Agents - Gerenciamento</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .form-group select,
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group select:focus,
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #51cf66 0%, #40c057 100%);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #ffd43b 0%, #fcc419 100%);
+            color: #333;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-running {
+            background: #51cf66;
+            animation: pulse 2s infinite;
+        }
+
+        .status-stopped {
+            background: #ff6b6b;
+        }
+
+        .status-starting {
+            background: #ffd43b;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .agent-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .agent-item {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .agent-item h3 {
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 1.1rem;
+        }
+
+        .agent-item p {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .metric-card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .metric-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .conversation-log {
+            max-height: 300px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .conversation-item {
+            background: white;
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-left: 3px solid #667eea;
+        }
+
+        .conversation-item .user {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .conversation-item .ai {
+            color: #764ba2;
+            font-weight: 600;
+        }
+
+        .conversation-item .timestamp {
+            color: #999;
+            font-size: 0.8rem;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .error {
+            background: #ffe6e6;
+            color: #d63031;
+            padding: 10px;
+            border-radius: 6px;
+            margin: 10px 0;
+            border-left: 4px solid #d63031;
+        }
+
+        .success {
+            background: #e6ffe6;
+            color: #00b894;
+            padding: 10px;
+            border-radius: 6px;
+            margin: 10px 0;
+            border-left: 4px solid #00b894;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .metrics-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎤 LiveKit AI Voice Agents</h1>
+            <p>Gerenciamento de Agentes de Voz por IA com Groq + LiveKit + Railway</p>
+        </div>
+
+        <div class="dashboard">
+            <!-- Painel de Controle -->
+            <div class="card">
+                <h2>🚀 Controle de Agentes</h2>
+                <form id="agentForm">
+                    <div class="form-group">
+                        <label for="agentType">Tipo de Agente:</label>
+                        <select id="agentType" required>
+                            <option value="groq">Agente Groq Básico</option>
+                            <option value="advanced_groq">Agente Groq Avançado</option>
+                            <option value="basic">Agente STT Básico</option>
+                            <option value="advanced">Agente STT Avançado</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="roomName">Nome da Sala:</label>
+                        <input type="text" id="roomName" placeholder="ex: sala-reuniao-001" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="personality">Personalidade (Avançado):</label>
+                        <select id="personality">
+                            <option value="assistant">Assistente</option>
+                            <option value="teacher">Professor</option>
+                            <option value="friend">Amigo</option>
+                            <option value="coach">Coach</option>
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-success">▶️ Iniciar Agente</button>
+                </form>
+                
+                <div id="controlMessages"></div>
+            </div>
+
+            <!-- Status dos Agentes -->
+            <div class="card">
+                <h2>📊 Status dos Agentes</h2>
+                <div id="agentsList" class="agent-list">
+                    <div class="loading">Carregando agentes...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Métricas e Logs -->
+        <div class="dashboard">
+            <!-- Métricas Gerais -->
+            <div class="card">
+                <h2>📈 Métricas Gerais</h2>
+                <div id="metricsGrid" class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-value" id="totalAgents">0</div>
+                        <div class="metric-label">Agentes Ativos</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="totalInteractions">0</div>
+                        <div class="metric-label">Interações</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="totalConversations">0</div>
+                        <div class="metric-label">Conversas</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="totalErrors">0</div>
+                        <div class="metric-label">Erros</div>
+                    </div>
+                </div>
+                
+                <button class="btn btn-warning" onclick="refreshMetrics()">🔄 Atualizar Métricas</button>
+            </div>
+
+            <!-- Log de Conversas -->
+            <div class="card">
+                <h2>💬 Log de Conversas</h2>
+                <div id="conversationLog" class="conversation-log">
+                    <div class="loading">Carregando conversas...</div>
+                </div>
+                
+                <button class="btn btn-warning" onclick="refreshConversations()">🔄 Atualizar Conversas</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class AgentManager {
+            constructor() {
+                this.apiBase = window.location.origin;
+                this.initializeEventListeners();
+                this.startPeriodicUpdates();
+            }
+
+            initializeEventListeners() {
+                document.getElementById('agentForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.startAgent();
+                });
+            }
+
+            async startAgent() {
+                const agentType = document.getElementById('agentType').value;
+                const roomName = document.getElementById('roomName').value;
+                const personality = document.getElementById('personality').value;
+
+                const agentConfig = {
+                    agent_type: agentType,
+                    room_name: roomName,
+                    personality: personality,
+                    features: []
+                };
+
+                try {
+                    const response = await fetch(`${this.apiBase}/agents/start`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(agentConfig)
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        this.showMessage('Agente iniciado com sucesso!', 'success');
+                        this.refreshAgents();
+                        this.refreshMetrics();
+                    } else {
+                        this.showMessage(`Erro: ${result.detail}`, 'error');
+                    }
+                } catch (error) {
+                    this.showMessage(`Erro de conexão: ${error.message}`, 'error');
+                }
+            }
+
+            async stopAgent(agentId) {
+                try {
+                    const response = await fetch(`${this.apiBase}/agents/${agentId}/stop`, {
+                        method: 'POST'
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        this.showMessage('Agente parado com sucesso!', 'success');
+                        this.refreshAgents();
+                        this.refreshMetrics();
+                    } else {
+                        this.showMessage(`Erro: ${result.detail}`, 'error');
+                    }
+                } catch (error) {
+                    this.showMessage(`Erro de conexão: ${error.message}`, 'error');
+                }
+            }
+
+            async refreshAgents() {
+                try {
+                    const response = await fetch(`${this.apiBase}/agents`);
+                    const data = await response.json();
+
+                    const agentsList = document.getElementById('agentsList');
+                    
+                    if (data.agents.length === 0) {
+                        agentsList.innerHTML = '<div class="loading">Nenhum agente ativo</div>';
+                        return;
+                    }
+
+                    agentsList.innerHTML = data.agents.map(agent => `
+                        <div class="agent-item">
+                            <h3>
+                                <span class="status-indicator status-${agent.status}"></span>
+                                ${agent.agent_type} - ${agent.room_name}
+                            </h3>
+                            <p><strong>ID:</strong> ${agent.agent_id}</p>
+                            <p><strong>Status:</strong> ${agent.status}</p>
+                            <p><strong>Personalidade:</strong> ${agent.personality}</p>
+                            <p><strong>Iniciado:</strong> ${new Date(agent.start_time).toLocaleString()}</p>
+                            <p><strong>Interações:</strong> ${agent.metrics.total_interactions}</p>
+                            <p><strong>Erros:</strong> ${agent.metrics.errors}</p>
+                            ${agent.status === 'running' ? 
+                                `<button class="btn btn-danger" onclick="agentManager.stopAgent('${agent.agent_id}')">⏹️ Parar</button>` : 
+                                ''
+                            }
+                        </div>
+                    `).join('');
+                } catch (error) {
+                    document.getElementById('agentsList').innerHTML = 
+                        '<div class="error">Erro ao carregar agentes: ' + error.message + '</div>';
+                }
+            }
+
+            async refreshMetrics() {
+                try {
+                    const response = await fetch(`${this.apiBase}/metrics`);
+                    const data = await response.json();
+
+                    document.getElementById('totalAgents').textContent = data.active_agents;
+                    document.getElementById('totalInteractions').textContent = data.total_interactions;
+                    document.getElementById('totalConversations').textContent = data.total_conversations;
+                    document.getElementById('totalErrors').textContent = data.total_errors;
+                } catch (error) {
+                    console.error('Erro ao carregar métricas:', error);
+                }
+            }
+
+            async refreshConversations() {
+                try {
+                    const response = await fetch(`${this.apiBase}/conversations?limit=20`);
+                    const data = await response.json();
+
+                    const conversationLog = document.getElementById('conversationLog');
+                    
+                    if (data.conversations.length === 0) {
+                        conversationLog.innerHTML = '<div class="loading">Nenhuma conversa registrada</div>';
+                        return;
+                    }
+
+                    conversationLog.innerHTML = data.conversations.map(conv => `
+                        <div class="conversation-item">
+                            <div class="user">👤 ${conv.participant_id}: ${conv.message}</div>
+                            ${conv.agent_response ? 
+                                `<div class="ai">🤖 IA: ${conv.agent_response}</div>` : 
+                                ''
+                            }
+                            <div class="timestamp">${new Date(conv.timestamp).toLocaleString()}</div>
+                        </div>
+                    `).join('');
+                } catch (error) {
+                    document.getElementById('conversationLog').innerHTML = 
+                        '<div class="error">Erro ao carregar conversas: ' + error.message + '</div>';
+                }
+            }
+
+            showMessage(message, type) {
+                const messagesDiv = document.getElementById('controlMessages');
+                const messageDiv = document.createElement('div');
+                messageDiv.className = type;
+                messageDiv.textContent = message;
+                messagesDiv.appendChild(messageDiv);
+
+                setTimeout(() => {
+                    messageDiv.remove();
+                }, 5000);
+            }
+
+            startPeriodicUpdates() {
+                // Atualizar a cada 10 segundos
+                setInterval(() => {
+                    this.refreshAgents();
+                    this.refreshMetrics();
+                }, 10000);
+
+                // Atualizar conversas a cada 30 segundos
+                setInterval(() => {
+                    this.refreshConversations();
+                }, 30000);
+
+                // Carregamento inicial
+                this.refreshAgents();
+                this.refreshMetrics();
+                this.refreshConversations();
+            }
+        }
+
+        // Funções globais para os botões
+        function refreshMetrics() {
+            agentManager.refreshMetrics();
+        }
+
+        function refreshConversations() {
+            agentManager.refreshConversations();
+        }
+
+        // Inicializar o gerenciador quando a página carregar
+        let agentManager;
+        document.addEventListener('DOMContentLoaded', () => {
+            agentManager = new AgentManager();
+        });
+    </script>
+</body>
+</html> 
