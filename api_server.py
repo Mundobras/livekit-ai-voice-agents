@@ -93,7 +93,7 @@ async def start_agent(agent_config: AgentConfig, background_tasks: BackgroundTas
         lk_api = api.LiveKitAPI()
 
         # 1. Verifica se a sala já existe
-        room_list = await lk_api.room.list_rooms()
+        room_list = await lk_api.room.list_rooms([agent_config.room_name])
         existing_room = next((r for r in room_list.rooms if r.name == agent_config.room_name), None)
 
         if not existing_room:
