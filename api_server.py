@@ -90,24 +90,38 @@ async def health_check():
 async def start_agent(agent_config: AgentConfig, background_tasks: BackgroundTasks):
     """Inicia um novo agente, criando a sala se não existir."""
     try:
-        # Inicializa a API do LiveKit seguindo a documentação oficial
-        lk_api = LiveKitAPI(
-            url=os.getenv("LIVEKIT_URL"),
-            api_key=os.getenv("LIVEKIT_API_KEY"),
-            api_secret=os.getenv("LIVEKIT_API_SECRET"),
-        )
-        room_service = lk_api.room
+        # Verificar se as credenciais do LiveKit estão configuradas
+        livekit_url = os.getenv("LIVEKIT_URL")
+        livekit_key = os.getenv("LIVEKIT_API_KEY")
+        livekit_secret = os.getenv("LIVEKIT_API_SECRET")
+        
+        if livekit_url and livekit_key and livekit_secret:
+            # Inicializa a API do LiveKit apenas se as credenciais estiverem configuradas
+            try:
+                lk_api = LiveKitAPI(
+                    url=livekit_url,
+                    api_key=livekit_key,
+                    api_secret=livekit_secret,
+                )
+                room_service = lk_api.room
 
-        # 1. Verifica se a sala já existe, usando o objeto de requisição correto
-        list_request = room_proto.ListRoomsRequest(names=[agent_config.room_name])
-        room_list = await room_service.list_rooms(list_request)
+                # Verifica se a sala já existe
+                list_request = room_proto.ListRoomsRequest(names=[agent_config.room_name])
+                room_list = await room_service.list_rooms(list_request)
 
-        if not room_list.rooms:
-            # 2. Se não existir, cria a sala
-            logger.info(f"Sala '{agent_config.room_name}' não encontrada. Criando...")
-            create_request = room_proto.CreateRoomRequest(name=agent_config.room_name)
-            await room_service.create_room(create_request)
-            logger.info(f"Sala '{agent_config.room_name}' criada com sucesso.")
+                if not room_list.rooms:
+                    # Se não existir, cria a sala
+                    logger.info(f"Sala '{agent_config.room_name}' não encontrada. Criando...")
+                    create_request = room_proto.CreateRoomRequest(name=agent_config.room_name)
+                    await room_service.create_room(create_request)
+                    logger.info(f"Sala '{agent_config.room_name}' criada com sucesso.")
+                else:
+                    logger.info(f"Sala '{agent_config.room_name}' já existe.")
+            except Exception as lk_error:
+                logger.warning(f"Erro na API do LiveKit: {lk_error}")
+                logger.info(f"Continuando sem criar sala via API. Sala: {agent_config.room_name}")
+        else:
+            logger.info(f"Credenciais LiveKit não configuradas. Iniciando agente diretamente para sala: {agent_config.room_name}")
 
         # 3. Procede com a criação do agente
         agent_id = f"{agent_config.agent_type}_{agent_config.room_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
