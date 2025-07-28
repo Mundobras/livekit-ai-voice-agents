@@ -1,6 +1,8 @@
 import os
 import json
 import logging
+import subprocess
+import sys
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 from dotenv import load_dotenv
@@ -122,26 +124,32 @@ async def start_agent(agent_config: AgentConfig, background_tasks: BackgroundTas
         raise HTTPException(status_code=500, detail=str(e))
 
 async def start_agent_process(agent_id: str, agent_config: AgentConfig):
-    """Inicia o processo do agente"""
+    """Inicia o processo do agente em segundo plano"""
     try:
-        # Atualizar status
         active_agents[agent_id]["status"] = "running"
-        
-        # Aqui você pode iniciar o agente específico baseado no tipo
+
+        script_to_run = ""
         if agent_config.agent_type == "groq":
-            # Importar e executar o agente Groq
-            from groq_voice_agent import entrypoint
-            # Implementar lógica para executar o agente
-            logger.info(f"Agente Groq {agent_id} em execução")
+            script_to_run = "groq_voice_agent"
         elif agent_config.agent_type == "advanced_groq":
-            # Importar e executar o agente avançado
-            from advanced_groq_agent import entrypoint
-            # Implementar lógica para executar o agente
-            logger.info(f"Agente avançado Groq {agent_id} em execução")
+            script_to_run = "advanced_groq_agent"
         else:
-            # Agentes básicos
-            logger.info(f"Agente básico {agent_id} em execução")
-            
+            logger.warning(f"Tipo de agente desconhecido: {agent_config.agent_type}")
+            active_agents[agent_id]["status"] = "error"
+            return
+
+        command = [
+            "livekit-agent",
+            "run",
+            script_to_run,
+            "--room",
+            agent_config.room_name,
+        ]
+
+        process = subprocess.Popen(command)
+        active_agents[agent_id]["process"] = process
+        logger.info(f"Agente {script_to_run} ({agent_id}) iniciado com PID {process.pid} para a sala {agent_config.room_name}")
+
     except Exception as e:
         logger.error(f"Erro no processo do agente {agent_id}: {e}")
         active_agents[agent_id]["status"] = "error"
@@ -152,26 +160,31 @@ async def stop_agent(agent_id: str):
     """Para um agente específico"""
     if agent_id not in active_agents:
         raise HTTPException(status_code=404, detail="Agente não encontrado")
-    
+
     try:
-        active_agents[agent_id]["status"] = "stopping"
-        
-        # Aqui você implementaria a lógica para parar o agente
-        # Por exemplo, enviar sinal de parada para o processo
-        
-        # Remover do dicionário de agentes ativos
-        agent_info = active_agents.pop(agent_id)
-        
+        agent_info = active_agents[agent_id]
+        agent_info["status"] = "stopping"
+
+        process = agent_info.get("process")
+        if process:
+            process.terminate()
+            process.wait()
+            logger.info(f"Processo do agente {agent_id} (PID: {process.pid}) terminado.")
+
+        active_agents.pop(agent_id)
+
         logger.info(f"Agente {agent_id} parado com sucesso")
-        
+
         return {
             "message": "Agente parado com sucesso",
             "agent_id": agent_id,
             "final_metrics": agent_info["metrics"]
         }
-        
+
     except Exception as e:
         logger.error(f"Erro ao parar agente {agent_id}: {e}")
+        if agent_id in active_agents:
+            active_agents.pop(agent_id)
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/agents")
