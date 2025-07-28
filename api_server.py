@@ -126,9 +126,8 @@ async def start_agent(agent_config: AgentConfig, background_tasks: BackgroundTas
             "agent_id": agent_id,
             "status": "starting"
         }
-        
-        except HTTPException:
-        raise  # Re-lança a exceção HTTP para que o FastAPI a manipule corretamente
+    except HTTPException as e:
+        raise e  # Re-lança a exceção HTTP para que o FastAPI a manipule corretamente
     except Exception as e:
         logger.error(f"Erro inesperado ao iniciar agente: {e}")
         raise HTTPException(status_code=500, detail=f"Erro interno do servidor: {e}")
