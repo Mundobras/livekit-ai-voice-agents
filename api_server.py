@@ -12,7 +12,7 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
-from livekit.api import LiveKitAPI, RoomServiceClient
+from livekit.api import LiveKitAPI
 from livekit.protocol import room as room_proto
 
 load_dotenv()
