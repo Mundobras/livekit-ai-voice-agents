@@ -131,9 +131,9 @@ async def start_agent_process(agent_id: str, agent_config: AgentConfig):
 
         script_to_run = ""
         if agent_config.agent_type == "groq":
-            script_to_run = "groq_voice_agent"
+            script_to_run = "groq_voice_agent.py"
         elif agent_config.agent_type == "advanced_groq":
-            script_to_run = "advanced_groq_agent"
+            script_to_run = "advanced_groq_agent.py"
         else:
             logger.warning(f"Tipo de agente desconhecido: {agent_config.agent_type}")
             active_agents[agent_id]["status"] = "error"
