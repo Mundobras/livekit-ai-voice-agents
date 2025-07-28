@@ -12,6 +12,7 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
+from livekit import api
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
@@ -86,8 +87,20 @@ async def health_check():
 
 @app.post("/agents/start")
 async def start_agent(agent_config: AgentConfig, background_tasks: BackgroundTasks):
-    """Inicia um novo agente"""
+    """Inicia um novo agente, criando a sala se não existir."""
     try:
+        # Inicializa a API do LiveKit (usará variáveis de ambiente)
+        lk_api = api.LiveKitAPI()
+
+        # 1. Verifica se a sala já existe
+        rooms = await lk_api.room.list_rooms(names=[agent_config.room_name])
+        if not rooms:
+            # 2. Se não existir, cria a sala
+            logger.info(f"Sala '{agent_config.room_name}' não encontrada. Criando...")
+            await lk_api.room.create_room(api.CreateRoomRequest(name=agent_config.room_name))
+            logger.info(f"Sala '{agent_config.room_name}' criada com sucesso.")
+
+        # 3. Procede com a criação do agente
         agent_id = f"{agent_config.agent_type}_{agent_config.room_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         
         # Verificar se já existe um agente para esta sala
@@ -126,10 +139,11 @@ async def start_agent(agent_config: AgentConfig, background_tasks: BackgroundTas
             "agent_id": agent_id,
             "status": "starting"
         }
-    except HTTPException as e:
-        raise e  # Re-lança a exceção HTTP para que o FastAPI a manipule corretamente
+
+    except HTTPException as http_exc:
+        raise http_exc  # Re-lança a exceção HTTP para que o FastAPI a manipule
     except Exception as e:
-        logger.error(f"Erro inesperado ao iniciar agente: {e}")
+        logger.error(f"Erro inesperado ao iniciar agente ou gerenciar sala: {e}")
         raise HTTPException(status_code=500, detail=f"Erro interno do servidor: {e}")
 
 class StopAgentRequest(BaseModel):
