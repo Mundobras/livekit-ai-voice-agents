@@ -141,7 +141,7 @@ async def start_agent_process(agent_id: str, agent_config: AgentConfig):
         command = [
             sys.executable,  # Garante que estamos usando o python correto do ambiente
             "-m",
-            "livekit.agents.cli",
+            "livekit.agents.cli.main",
             "run",
             script_to_run,
             "--room",
