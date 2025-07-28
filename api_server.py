@@ -90,7 +90,11 @@ async def start_agent(agent_config: AgentConfig, background_tasks: BackgroundTas
     """Inicia um novo agente, criando a sala se não existir."""
     try:
         # Inicializa a API do LiveKit (usará variáveis de ambiente)
-        lk_api = api.LiveKitAPI()
+        lk_api = api.LiveKitAPI(
+            url=os.getenv("LIVEKIT_URL"),
+            api_key=os.getenv("LIVEKIT_API_KEY"),
+            api_secret=os.getenv("LIVEKIT_API_SECRET"),
+        )
 
         # 1. Verifica se a sala já existe, usando o objeto de requisição correto
         list_request = api.ListRoomsRequest(names=[agent_config.room_name])
