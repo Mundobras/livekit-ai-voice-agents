@@ -3,6 +3,7 @@ import json
 import logging
 import subprocess
 import sys
+import threading
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 from dotenv import load_dotenv
@@ -148,7 +149,19 @@ async def start_agent_process(agent_id: str, agent_config: AgentConfig):
             agent_config.room_name,
         ]
 
-        process = subprocess.Popen(command)
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            encoding='utf-8',
+            errors='replace'
+        )
+
+        # Iniciar a thread para registrar a saída do agente
+        log_thread = threading.Thread(target=log_agent_output, args=(agent_id, process))
+        log_thread.daemon = True  # Permite que a aplicação principal saia mesmo que a thread esteja rodando
+        log_thread.start()
         active_agents[agent_id]["process"] = process
         logger.info(f"Agente {script_to_run} ({agent_id}) iniciado com PID {process.pid} para a sala {agent_config.room_name}")
 
@@ -156,6 +169,33 @@ async def start_agent_process(agent_id: str, agent_config: AgentConfig):
         logger.error(f"Erro no processo do agente {agent_id}: {e}")
         active_agents[agent_id]["status"] = "error"
         active_agents[agent_id]["metrics"]["errors"] += 1
+
+def log_agent_output(agent_id: str, process: subprocess.Popen):
+    """
+    Lê a saída de um processo de agente em uma thread separada e a registra.
+    Atualiza o status do agente quando o processo termina.
+    """
+    try:
+        if process.stdout:
+            for line in iter(process.stdout.readline, ''):
+                logger.info(f"[AgentLog-{agent_id}]: {line.strip()}")
+            process.stdout.close()
+
+        return_code = process.wait()
+        logger.info(f"Processo do agente {agent_id} finalizado com código: {return_code}")
+
+        if agent_id in active_agents:
+            if return_code == 0:
+                active_agents[agent_id]["status"] = "finished"
+            else:
+                active_agents[agent_id]["status"] = "crashed"
+                active_agents[agent_id]["metrics"]["errors"] += 1
+            
+            active_agents[agent_id]["process"] = None
+            active_agents[agent_id]["ended_at"] = datetime.now().isoformat()
+
+    except Exception as e:
+        logger.error(f"Erro no logger do processo do agente {agent_id}: {e}")
 
 @app.post("/agents/{agent_id}/stop")
 async def stop_agent(agent_id: str):
