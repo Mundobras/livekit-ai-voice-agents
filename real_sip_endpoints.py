@@ -152,7 +152,7 @@ async def make_real_sip_call(
             from livekit.api import CreateSIPParticipantRequest
             
             sip_participant_request = CreateSIPParticipantRequest(
-                sip_trunk_id=os.getenv("LIVEKIT_SIP_TRUNK_ID", "default"),
+                sip_trunk_id=os.getenv("LIVEKIT_SIP_TRUNK_ID", "ST_kaugWLXFJoR7"),  # SEU TRUNK REAL!
                 sip_call_to=config.destination_number,  # NÚMERO QUE VAI TOCAR!
                 room_name=room_name,
                 participant_identity=f"sip_caller_{call_id}",
