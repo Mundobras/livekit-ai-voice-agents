@@ -14,7 +14,7 @@ from pydantic import BaseModel
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from dotenv import load_dotenv
 
-from livekit.api import LiveKitAPI, CreateRoomRequest, RoomServiceClient
+from livekit.api import LiveKitAPI, CreateRoomRequest
 from livekit.protocol import room as room_proto
 
 load_dotenv()

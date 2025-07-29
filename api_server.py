@@ -2,6 +2,7 @@ import os
 import json
 import logging
 import subprocess
+import asyncio
 import sys
 import threading
 from datetime import datetime
@@ -16,7 +17,14 @@ from pydantic import BaseModel
 import uvicorn
 from livekit.api import LiveKitAPI
 from livekit.protocol import room as room_proto
-from sip_endpoints import sip_router
+# Import condicional para evitar crash no Railway
+try:
+    from sip_endpoints import sip_router
+    SIP_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"SIP endpoints não disponíveis: {e}")
+    SIP_AVAILABLE = False
+    sip_router = None
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
@@ -37,8 +45,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Incluir endpoints SIP
-app.include_router(sip_router)
+# Incluir endpoints SIP se disponível
+if SIP_AVAILABLE and sip_router:
+    app.include_router(sip_router)
+    logger.info("Endpoints SIP carregados com sucesso")
+else:
+    logger.warning("Endpoints SIP não carregados - funcionalidade SIP desabilitada")
 
 @app.get("/", status_code=200)
 async def health_check():
@@ -46,6 +58,21 @@ async def health_check():
     Health check endpoint for Railway.
     """
     return {"status": "ok", "message": "API is healthy"}
+
+@app.get("/sip/status")
+async def sip_status_fallback():
+    """
+    Endpoint básico de status SIP (fallback se sip_endpoints não carregar)
+    """
+    return {
+        "success": True,
+        "sip_enabled": SIP_AVAILABLE,
+        "livekit_connected": bool(os.getenv("LIVEKIT_URL")),
+        "active_calls": 0,
+        "total_history": 0,
+        "system_time": datetime.now().isoformat(),
+        "message": "SIP básico funcionando" if SIP_AVAILABLE else "SIP endpoints não carregados"
+    }
 
 # Modelos Pydantic
 class AgentConfig(BaseModel):
