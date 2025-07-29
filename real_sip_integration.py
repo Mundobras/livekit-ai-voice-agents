@@ -222,9 +222,10 @@ async def real_sip_entrypoint(ctx: JobContext):
         ),
     )
 
-async def create_real_sip_call(destination_number: str, caller_id: str = None) -> Dict[str, Any]:
+async def create_real_sip_call(destination_number: str, caller_id: str = None, sip_trunk_id: str = None) -> Dict[str, Any]:
     """
-    Cria uma ligação SIP real usando LiveKit
+    Cria uma ligação SIP REAL usando LiveKit CreateSIPParticipant API
+    Esta função fará o telefone de destino TOCAR de verdade!
     """
     try:
         # Configurar LiveKit API
@@ -237,12 +238,12 @@ async def create_real_sip_call(destination_number: str, caller_id: str = None) -
         call_id = f"real_call_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         room_name = f"sip_real_{call_id}"
         
-        # Criar sala para ligação real
+        # 1. Criar sala para ligação real
         from livekit.api import CreateRoomRequest
         room_request = CreateRoomRequest(
             name=room_name,
-            empty_timeout=30,
-            max_participants=2,
+            empty_timeout=60,
+            max_participants=3,  # Caller + AI Agent + SIP Participant
             metadata=json.dumps({
                 "type": "real_sip_call",
                 "call_id": call_id,
@@ -254,29 +255,57 @@ async def create_real_sip_call(destination_number: str, caller_id: str = None) -
         )
         
         room = await lk_api.room.create_room(room_request)
+        logger.info(f"✅ Sala criada para ligação real: {room_name}")
         
-        logger.info(f"Sala criada para ligação real: {room_name}")
-        logger.info(f"Destino: {destination_number}")
+        # 2. CRIAR SIP PARTICIPANT - ISSO FAZ O TELEFONE TOCAR!
+        from livekit.api import CreateSIPParticipantRequest
         
-        # Aqui você integraria com o SIP do LiveKit
-        # O LiveKit deve ter configurações SIP para fazer a ligação real
+        # Configuração do SIP Participant para ligação real
+        sip_participant_request = CreateSIPParticipantRequest(
+            sip_trunk_id=sip_trunk_id or os.getenv("LIVEKIT_SIP_TRUNK_ID", "default"),
+            sip_call_to=destination_number,  # NÚMERO QUE VAI TOCAR!
+            room_name=room_name,
+            participant_identity=f"sip_caller_{call_id}",
+            participant_name=caller_id or "AI Assistant",
+            krisp_enabled=True,  # Cancelamento de ruído
+            wait_until_answered=False,  # Não esperar atender para retornar
+            play_dialtone=True,  # Tocar dial tone enquanto chama
+            participant_metadata=json.dumps({
+                "call_id": call_id,
+                "call_type": "outbound_real",
+                "destination": destination_number,
+                "timestamp": datetime.now().isoformat()
+            })
+        )
+        
+        # 3. EXECUTAR A LIGAÇÃO REAL!
+        logger.info(f"🔥 FAZENDO LIGAÇÃO REAL para {destination_number}...")
+        sip_participant = await lk_api.sip.create_sip_participant(sip_participant_request)
+        
+        logger.info(f"🎉 LIGAÇÃO REAL INICIADA!")
+        logger.info(f"📞 SIP Participant ID: {sip_participant.participant_id}")
+        logger.info(f"📞 Destino: {destination_number}")
+        logger.info(f"📞 Status: {sip_participant.sip_call_status}")
         
         return {
             "success": True,
             "call_id": call_id,
             "room_name": room_name,
             "destination": destination_number,
-            "status": "calling",
-            "message": f"Ligação real iniciada para {destination_number}",
-            "livekit_room": room.name
+            "status": "calling",  # Telefone está tocando!
+            "message": f"🔥 LIGAÇÃO REAL iniciada para {destination_number}! Telefone deve estar tocando!",
+            "livekit_room": room.name,
+            "sip_participant_id": sip_participant.participant_id,
+            "sip_call_status": sip_participant.sip_call_status,
+            "real_phone_call": True
         }
         
     except Exception as e:
-        logger.error(f"Erro ao criar ligação SIP real: {e}")
+        logger.error(f"❌ Erro ao criar ligação SIP real: {e}")
         return {
             "success": False,
             "error": str(e),
-            "message": "Falha ao iniciar ligação real"
+            "message": f"Falha ao iniciar ligação real: {str(e)}"
         }
 
 if __name__ == "__main__":
