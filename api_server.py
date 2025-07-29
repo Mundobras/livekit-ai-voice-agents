@@ -10,10 +10,13 @@ from dotenv import load_dotenv
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import uvicorn
 from livekit.api import LiveKitAPI
 from livekit.protocol import room as room_proto
+from sip_endpoints import sip_router
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
@@ -33,6 +36,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Incluir endpoints SIP
+app.include_router(sip_router)
 
 @app.get("/", status_code=200)
 async def health_check():
@@ -61,6 +67,29 @@ class ConversationMessage(BaseModel):
     message: str
     timestamp: str
     agent_response: Optional[str] = None
+
+class TelephonyCallConfig(BaseModel):
+    phone_number: str
+    agent_type: str = "telephony"
+    greeting_message: Optional[str] = "Olá! Eu sou seu assistente de IA. Como posso ajudá-lo hoje?"
+    max_duration: Optional[int] = 1800  # 30 minutos
+    recording_enabled: Optional[bool] = True
+    personality: Optional[str] = "professional"
+
+class OutboundCallRequest(BaseModel):
+    destination_number: str
+    agent_type: str = "telephony"
+    message: Optional[str] = None
+    scheduled_time: Optional[str] = None
+
+class CallStatus(BaseModel):
+    call_id: str
+    status: str  # "ringing", "connected", "ended", "failed"
+    duration: Optional[int] = None
+    caller_id: Optional[str] = None
+    agent_id: Optional[str] = None
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
 
 # Estado global da aplicação
 active_agents: Dict[str, Dict[str, Any]] = {}

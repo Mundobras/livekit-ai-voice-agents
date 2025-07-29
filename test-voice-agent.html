@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎤 Teste Voice Agent - LiveKit</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        .status {
+            text-align: center;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            font-size: 1.2em;
+            font-weight: 600;
+        }
+        .status.connecting {
+            background: rgba(255, 193, 7, 0.2);
+            border: 2px solid #ffc107;
+        }
+        .status.connected {
+            background: rgba(40, 167, 69, 0.2);
+            border: 2px solid #28a745;
+        }
+        .status.error {
+            background: rgba(220, 53, 69, 0.2);
+            border: 2px solid #dc3545;
+        }
+        .controls {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin: 30px 0;
+        }
+        button {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn-primary {
+            background: linear-gradient(45deg, #007bff, #0056b3);
+            color: white;
+        }
+        .btn-success {
+            background: linear-gradient(45deg, #28a745, #1e7e34);
+            color: white;
+        }
+        .btn-danger {
+            background: linear-gradient(45deg, #dc3545, #c82333);
+            color: white;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            box-sizing: border-box;
+        }
+        .log {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        .log-entry {
+            margin-bottom: 10px;
+            padding: 5px;
+            border-radius: 5px;
+        }
+        .log-info {
+            background: rgba(23, 162, 184, 0.2);
+        }
+        .log-success {
+            background: rgba(40, 167, 69, 0.2);
+        }
+        .log-error {
+            background: rgba(220, 53, 69, 0.2);
+        }
+        .info-box {
+            background: rgba(23, 162, 184, 0.2);
+            border: 1px solid #17a2b8;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎤 Teste Voice Agent LiveKit</h1>
+        
+        <div class="info-box">
+            <strong>ℹ️ Como usar:</strong><br>
+            1. Preencha o nome da sala<br>
+            2. Clique em "Criar Sala + Agente"<br>
+            3. Aguarde a conexão<br>
+            4. Teste o microfone e conversação
+        </div>
+
+        <div class="form-group">
+            <label for="roomName">🏷️ Nome da Sala:</label>
+            <input type="text" id="roomName" value="teste-voice-" placeholder="Ex: minha-sala-teste">
+        </div>
+
+        <div class="form-group">
+            <label for="agentType">🤖 Tipo de Agente:</label>
+            <select id="agentType">
+                <option value="groq">Groq Voice Agent</option>
+                <option value="advanced_groq">Groq Avançado</option>
+            </select>
+        </div>
+
+        <div id="status" class="status connecting">
+            🔄 Pronto para criar sala
+        </div>
+
+        <div class="controls">
+            <button id="createBtn" class="btn-primary">🚀 Criar Sala + Agente</button>
+            <button id="stopBtn" class="btn-danger" disabled>⏹️ Parar Agente</button>
+            <button id="testMicBtn" class="btn-success">🎤 Testar Microfone</button>
+        </div>
+
+        <div id="log" class="log">
+            <div class="log-entry log-info">📋 Sistema pronto. Aguardando ações...</div>
+        </div>
+    </div>
+
+    <script>
+        // Detectar se está rodando localmente ou no Railway
+        const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+            ? 'http://localhost:8000' 
+            : window.location.origin;
+        let currentAgentId = null;
+        let isRecording = false;
+
+        // Elementos DOM
+        const statusEl = document.getElementById('status');
+        const logEl = document.getElementById('log');
+        const createBtn = document.getElementById('createBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const testMicBtn = document.getElementById('testMicBtn');
+        const roomNameEl = document.getElementById('roomName');
+        const agentTypeEl = document.getElementById('agentType');
+
+        // Gerar nome único para sala
+        roomNameEl.value = `teste-voice-${Date.now()}`;
+
+        // Função para adicionar log
+        function addLog(message, type = 'info') {
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry log-${type}`;
+            logEntry.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logEl.appendChild(logEntry);
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        // Função para atualizar status
+        function updateStatus(message, type = 'connecting') {
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+        }
+
+        // Criar sala e agente
+        createBtn.addEventListener('click', async () => {
+            const roomName = roomNameEl.value.trim();
+            const agentType = agentTypeEl.value;
+
+            if (!roomName) {
+                addLog('❌ Nome da sala é obrigatório', 'error');
+                return;
+            }
+
+            createBtn.disabled = true;
+            updateStatus('🔄 Criando sala e iniciando agente...', 'connecting');
+            addLog(`🏗️ Criando sala: ${roomName} com agente: ${agentType}`);
+
+            try {
+                const response = await fetch(`${API_BASE}/agents/start`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        agent_type: agentType,
+                        room_name: roomName,
+                        personality: 'assistant',
+                        features: ['transcription', 'ai_response']
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    currentAgentId = data.agent_id;
+                    updateStatus(`✅ Agente ativo na sala: ${roomName}`, 'connected');
+                    addLog(`✅ Sucesso! Agent ID: ${currentAgentId}`, 'success');
+                    addLog(`🎤 Sala criada: ${roomName}`, 'success');
+                    addLog(`🤖 Agente ${agentType} iniciado`, 'success');
+                    
+                    stopBtn.disabled = false;
+                    roomNameEl.disabled = true;
+                    agentTypeEl.disabled = true;
+                } else {
+                    throw new Error(data.detail || 'Erro desconhecido');
+                }
+            } catch (error) {
+                updateStatus(`❌ Erro: ${error.message}`, 'error');
+                addLog(`❌ Erro ao criar sala: ${error.message}`, 'error');
+                createBtn.disabled = false;
+            }
+        });
+
+        // Parar agente
+        stopBtn.addEventListener('click', async () => {
+            if (!currentAgentId) return;
+
+            stopBtn.disabled = true;
+            updateStatus('🔄 Parando agente...', 'connecting');
+            addLog(`⏹️ Parando agente: ${currentAgentId}`);
+
+            try {
+                const response = await fetch(`${API_BASE}/agents/stop`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        agent_id: currentAgentId
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    updateStatus('🔄 Pronto para criar nova sala', 'connecting');
+                    addLog(`✅ Agente parado com sucesso`, 'success');
+                    
+                    currentAgentId = null;
+                    createBtn.disabled = false;
+                    roomNameEl.disabled = false;
+                    agentTypeEl.disabled = false;
+                    roomNameEl.value = `teste-voice-${Date.now()}`;
+                } else {
+                    throw new Error(data.detail || 'Erro desconhecido');
+                }
+            } catch (error) {
+                updateStatus(`❌ Erro: ${error.message}`, 'error');
+                addLog(`❌ Erro ao parar agente: ${error.message}`, 'error');
+                stopBtn.disabled = false;
+            }
+        });
+
+        // Testar microfone
+        testMicBtn.addEventListener('click', async () => {
+            if (isRecording) {
+                addLog('🎤 Microfone já está sendo testado', 'info');
+                return;
+            }
+
+            try {
+                addLog('🎤 Solicitando acesso ao microfone...', 'info');
+                
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: true 
+                });
+                
+                addLog('✅ Microfone acessado com sucesso!', 'success');
+                addLog('🔊 Testando captura de áudio por 5 segundos...', 'info');
+                
+                isRecording = true;
+                testMicBtn.textContent = '🔴 Gravando...';
+                testMicBtn.disabled = true;
+
+                // Criar analisador de áudio
+                const audioContext = new AudioContext();
+                const analyser = audioContext.createAnalyser();
+                const microphone = audioContext.createMediaStreamSource(stream);
+                microphone.connect(analyser);
+
+                analyser.fftSize = 256;
+                const bufferLength = analyser.frequencyBinCount;
+                const dataArray = new Uint8Array(bufferLength);
+
+                let maxVolume = 0;
+                const checkAudio = () => {
+                    analyser.getByteFrequencyData(dataArray);
+                    const volume = Math.max(...dataArray);
+                    maxVolume = Math.max(maxVolume, volume);
+                };
+
+                const interval = setInterval(checkAudio, 100);
+
+                setTimeout(() => {
+                    clearInterval(interval);
+                    stream.getTracks().forEach(track => track.stop());
+                    audioContext.close();
+                    
+                    isRecording = false;
+                    testMicBtn.textContent = '🎤 Testar Microfone';
+                    testMicBtn.disabled = false;
+                    
+                    if (maxVolume > 10) {
+                        addLog(`✅ Microfone funcionando! Volume máximo: ${maxVolume}`, 'success');
+                        addLog('🎉 Áudio capturado com sucesso!', 'success');
+                    } else {
+                        addLog('⚠️ Microfone muito baixo ou não detectado', 'error');
+                        addLog('💡 Verifique se o microfone está ligado e próximo', 'info');
+                    }
+                }, 5000);
+
+            } catch (error) {
+                addLog(`❌ Erro ao acessar microfone: ${error.message}`, 'error');
+                addLog('💡 Verifique as permissões do navegador', 'info');
+                isRecording = false;
+                testMicBtn.textContent = '🎤 Testar Microfone';
+                testMicBtn.disabled = false;
+            }
+        });
+
+        // Verificar status da API
+        async function checkAPIStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                addLog(`✅ API conectada: ${data.status}`, 'success');
+            } catch (error) {
+                addLog(`❌ Erro na API: ${error.message}`, 'error');
+            }
+        }
+
+        // Inicializar
+        checkAPIStatus();
+        addLog('🚀 Interface carregada. Pronto para testar!', 'success');
+    </script>
+</body>
+</html>
