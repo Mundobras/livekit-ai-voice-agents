@@ -1,0 +1,27 @@
+# Asterisk AI Voice System Requirements
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+websockets==12.0
+psutil==5.9.6
+requests==2.31.0
+python-multipart==0.0.6
+pydantic==2.5.0
+
+# AI/ML Dependencies
+groq==0.4.1
+assemblyai==0.17.0
+
+# Audio Processing
+pydub==0.25.1
+speechrecognition==3.10.0
+pyaudio==0.2.11
+
+# WebRTC Support
+aiortc==1.6.0
+aioice==0.9.0
+av==10.0.0
+
+# Utilities
+python-dotenv==1.0.0
+asyncio-mqtt==0.13.0
+aiofiles==23.2.1
