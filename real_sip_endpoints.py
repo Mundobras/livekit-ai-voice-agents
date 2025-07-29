@@ -145,9 +145,36 @@ async def make_real_sip_call(
             room = await lk_api.room.create_room(room_request)
             logger.info(f"✅ Sala LiveKit criada para ligação real: {room_name}")
             
-            # AQUI É ONDE A MÁGICA ACONTECE!
-            # O LiveKit deve usar sua configuração SIP para fazer a ligação real
-            # Isso deve fazer o telefone de destino tocar
+            # 🔥 EXECUTAR LIGAÇÃO SIP REAL USANDO CreateSIPParticipant!
+            logger.info(f"🚀 Executando ligação SIP REAL...")
+            
+            # Usar LiveKitAPI diretamente para CreateSIPParticipant
+            from livekit.api import CreateSIPParticipantRequest
+            
+            sip_participant_request = CreateSIPParticipantRequest(
+                sip_trunk_id=os.getenv("LIVEKIT_SIP_TRUNK_ID", "default"),
+                sip_call_to=config.destination_number,  # NÚMERO QUE VAI TOCAR!
+                room_name=room_name,
+                participant_identity=f"sip_caller_{call_id}",
+                participant_name=config.caller_id,
+                krisp_enabled=True,
+                wait_until_answered=False,
+                play_dialtone=True,
+                participant_metadata=json.dumps({
+                    "call_id": call_id,
+                    "call_type": "outbound_real",
+                    "destination": config.destination_number,
+                    "timestamp": datetime.now().isoformat()
+                })
+            )
+            
+            # EXECUTAR A LIGAÇÃO REAL!
+            logger.info(f"📞 FAZENDO LIGAÇÃO REAL para {config.destination_number}...")
+            sip_participant = await lk_api.sip.create_sip_participant(sip_participant_request)
+            
+            logger.info(f"🎉 LIGAÇÃO REAL INICIADA!")
+            logger.info(f"📞 SIP Participant ID: {sip_participant.participant_id}")
+            logger.info(f"📞 Status: {sip_participant.sip_call_status}")
             
         except Exception as e:
             logger.error(f"❌ Erro ao criar sala LiveKit: {e}")
