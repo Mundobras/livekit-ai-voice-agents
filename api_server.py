@@ -26,6 +26,15 @@ except ImportError as e:
     SIP_AVAILABLE = False
     sip_router = None
 
+# Import dos endpoints SIP REAIS
+try:
+    from real_sip_endpoints import real_sip_router
+    REAL_SIP_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"Real SIP endpoints não disponíveis: {e}")
+    REAL_SIP_AVAILABLE = False
+    real_sip_router = None
+
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("api_server")
@@ -51,6 +60,13 @@ if SIP_AVAILABLE and sip_router:
     logger.info("Endpoints SIP carregados com sucesso")
 else:
     logger.warning("Endpoints SIP não carregados - funcionalidade SIP desabilitada")
+
+# Incluir endpoints SIP REAIS se disponível
+if REAL_SIP_AVAILABLE and real_sip_router:
+    app.include_router(real_sip_router)
+    logger.info("🔥 Endpoints SIP REAIS carregados com sucesso")
+else:
+    logger.warning("Endpoints SIP REAIS não carregados")
 
 @app.get("/", status_code=200)
 async def health_check():

@@ -161,10 +161,8 @@
     </div>
 
     <script>
-        // Detectar se está rodando localmente ou no Railway
-        const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-            ? 'http://localhost:8000' 
-            : window.location.origin;
+        // URL fixa do Railway para evitar problemas de detecção
+        const API_BASE = 'https://web-production-33dd3.up.railway.app';
         
         function showTab(tabName) {
             document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
